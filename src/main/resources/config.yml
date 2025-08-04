@@ -1,0 +1,18 @@
+show-level: true
+use-tiered-gradients: true
+format:
+  # Formato base para todos los niveles
+  level-format: "《Nv{level}》"
+  level-format2: "《Nv{level}》"
+
+tiered-gradients:
+  # Solo definimos los gradientes, no el texto completo
+  default: "gradient:#CCCCCC:#FFFFFF"
+  "0-17": "gradient:#DBD4D4:#A9A35D"     # Gris plateado
+  "18-34": "gradient:#49D094:#18793A"    # VERDE
+  "35-51": "gradient:#1C97DE:#2E39CF"    # AZUL
+  "52-66": "gradient:#FD63FD:#680AC6"    # MORADO
+  "67-84": "gradient:#EAD765:#CD9E02"    # DORADO
+  "85-120": "gradient:#F65959:#A50505"   # Rojo intenso
+
+
