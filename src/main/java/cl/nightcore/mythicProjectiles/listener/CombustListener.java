@@ -1,5 +1,7 @@
 package cl.nightcore.mythicProjectiles.listener;
 
+import cl.nightcore.mythicProjectiles.boss.BossUtil;
+import cl.nightcore.mythicProjectiles.boss.WorldBoss;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
@@ -34,6 +36,11 @@ public class CombustListener implements Listener {
 
         if (!(event.getEntity() instanceof LivingEntity entity)) {
             return;
+
+        }
+
+        if(WorldBoss.isBoss(entity)){
+            event.setCancelled(true);
         }
 
         if (entity.getWorld().getEnvironment() == World.Environment.NETHER ||

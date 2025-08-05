@@ -1,6 +1,9 @@
 package cl.nightcore.mythicProjectiles.listener;
 
 import cl.nightcore.mythicProjectiles.MythicProjectiles;
+import cl.nightcore.mythicProjectiles.boss.BossDifficulty;
+import cl.nightcore.mythicProjectiles.boss.BossUtil;
+import cl.nightcore.mythicProjectiles.boss.WorldBoss;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -32,10 +35,7 @@ public class SpawnListeners implements Listener {
     }
 
     private static void setNewDamage(LivingEntity entity, int level) {
-        // System.out.println(entity.getType().name());
-        // Check if the entity type has an ATTACK_DAMAGE attribute
         if (entity.getType().getDefaultAttributes().getAttribute(Attribute.ATTACK_DAMAGE) != null) {
-
             double damage = Objects.requireNonNull(entity.getType().getDefaultAttributes().getAttribute(Attribute.ATTACK_DAMAGE)).getValue();
             double multiplier = Math.pow(1.0425, level - 1);
             double newDamage = damage * multiplier;
@@ -44,13 +44,9 @@ public class SpawnListeners implements Listener {
     }
 
     private static void setScale(Spider entity) {
-        // Define los límites mínimo y máximo
-        double minScale = 0.4; // Escala mínima
-        double maxScale = 2.5; // Escala máxima
-
-        // Genera un número aleatorio entre minScale y maxScale
+        double minScale = 0.4;
+        double maxScale = 2.5;
         double scale = ThreadLocalRandom.current().nextDouble(minScale, maxScale);
-
         var attribute = entity.getAttribute(Attribute.SCALE);
         attribute.setBaseValue(scale);
     }
@@ -63,14 +59,31 @@ public class SpawnListeners implements Listener {
         );
     }
 
-    private static void applyModifiers(LivingEntity entity) {
+    private static void applyModifiers(LivingEntity entity, boolean canspawnboss) {
+        boolean debug = true;
         int level = determineLevel(entity);
-        // Asignar el nivel a la entidad
         setLeveledKey(entity, level);
-        // Asignar la nueva HP
+
+        // Verificar si la entidad puede ser un jefe
+        if (BossUtil.canBeBoss(entity) && canspawnboss) {
+            double bossChance = WorldBoss.calculateBossChance(level);
+
+            if (Math.random() < bossChance) {
+                // La entidad será un jefe
+                BossDifficulty difficulty = WorldBoss.selectRandomDifficulty();
+                BossUtil.applyBossModifications(entity, level, difficulty);
+                if (debug) {
+                    System.out.println(entity.getLocation());
+                }
+                return; // Salir temprano ya que BossUtil maneja HP y daño
+            }
+        }
+
+        // Aplicar modificadores normales si no es jefe
         setNewHealth(entity, level);
         setNewDamage(entity, level);
-        if (entity instanceof Spider spider){
+
+        if (entity instanceof Spider spider) {
             setScale(spider);
         }
     }
@@ -79,18 +92,16 @@ public class SpawnListeners implements Listener {
         int bufferZone = 500;
         int levelIncreaseDistance = 250;
         Location spawnLoc = entity.getLocation();
-        // Calcular distancia desde el spawn (0,0)
+
         double distance = Math.sqrt(
                 Math.pow(spawnLoc.getX(), 2) +
                         Math.pow(spawnLoc.getZ(), 2)
         );
-        // Calcular nivel basado en la distancia
+
         int level;
-        // Radio de la zona inicial (nivel 1)
         if (distance <= bufferZone) {
             level = 1;
         } else {
-            // Distancia para aumentar de nivel
             level = 1 + (int) ((distance - bufferZone) / levelIncreaseDistance);
         }
         return level;
@@ -100,16 +111,15 @@ public class SpawnListeners implements Listener {
     public void onChunkPopulate(ChunkPopulateEvent event) {
         for (@NotNull Entity entity : event.getChunk().getEntities()) {
             if (entity instanceof LivingEntity livingEntity) {
-                applyModifiers(livingEntity);
+                applyModifiers(livingEntity,false);
             }
         }
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onCreatureSpawn(CreatureSpawnEvent event) {
-        applyModifiers(event.getEntity());
+        applyModifiers(event.getEntity(),true);
     }
-
 
     @EventHandler(ignoreCancelled = true)
     private void onWolfTame(EntityTameEvent e) {
@@ -121,17 +131,14 @@ public class SpawnListeners implements Listener {
             if (MythicProjectiles.getLevel(wolf) > MythicProjectiles.getPlayerLevel(owner)) {
                 owner.sendMessage(Component.text("No puedes domesticar un animal de nivel superior al tuyo").color(NamedTextColor.RED));
                 e.setCancelled(true);
-
             }
         }
-        System.out.println("Setted new helt for wolf:" + entity.getName() + entity.getAttribute(Attribute.MAX_HEALTH));
+
+        System.out.println("Setted new health for wolf:" + entity.getName() + entity.getAttribute(Attribute.MAX_HEALTH));
         Bukkit.getScheduler().runTaskLater(MythicProjectiles.getInstance(), () -> {
-            setNewHealth(entity,level);
+            setNewHealth(entity, level);
         }, 2L);
 
-
         System.out.println("New health for wolf:" + entity.getName() + entity.getAttribute(Attribute.MAX_HEALTH));
-
     }
-
 }

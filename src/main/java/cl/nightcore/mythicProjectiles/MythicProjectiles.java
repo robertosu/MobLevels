@@ -1,5 +1,6 @@
 package cl.nightcore.mythicProjectiles;
 
+import cl.nightcore.mythicProjectiles.boss.WorldBoss;
 import cl.nightcore.mythicProjectiles.command.ReloadCommand;
 import cl.nightcore.mythicProjectiles.config.ConfigManager;
 import cl.nightcore.mythicProjectiles.listener.*;
@@ -34,22 +35,29 @@ public class MythicProjectiles extends JavaPlugin implements Listener {
         return (int )Math.round(AuraSkillsApi.get().getUserManager().getUser(player.getUniqueId()).getSkillAverage());
     }
 
-
-
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        // Initialize keys
+        levelKey = new NamespacedKey(this, "level");
+        instance = this;
+
+        // Initialize WorldBoss system
+        WorldBoss.initialize(this);
+
+        // Register listeners
         getServer().getPluginManager().registerEvents(new SpawnListeners(), this);
         getServer().getPluginManager().registerEvents(new DamageListeners(), this);
         getServer().getPluginManager().registerEvents(new CombustListener(), this);
         getServer().getPluginManager().registerEvents(new DeathMessageListeners(), this);
         getServer().getPluginManager().registerEvents(new XpGainListener(), this);
+        getServer().getPluginManager().registerEvents(new BossListener(), this);
 
         Objects.requireNonNull(getCommand("moblevels")).setExecutor(new ReloadCommand(this));
-        levelKey = new NamespacedKey(this, "level");
         configManager = new ConfigManager(this);
         nametagManager = new NametagManager(this);
-        instance = this;
+
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new AuraLevelExpansion(this).register();
         }
@@ -65,7 +73,6 @@ public class MythicProjectiles extends JavaPlugin implements Listener {
         configManager = new ConfigManager(this);
         nametagManager = new NametagManager(this);
     }
-
 
     public ConfigManager getConfigManager() {
         return configManager;
