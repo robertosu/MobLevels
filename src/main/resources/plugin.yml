@@ -3,9 +3,12 @@ version: '1.1-SNAPSHOT'
 main: cl.nightcore.mythicProjectiles.MythicProjectiles
 api-version: '1.21'
 depend: [AuraSkills, PlaceholderAPI, CommandAPI]
-softdepend: [MythicMobs, ExcellentEnchants]
+softdepend: [MythicMobs]
 
 commands:
   moblevels:
     description: Comando general
-    usage: /getscroll reload
+    usage: /moblevels reload
+  relevelmobs:
+    description: enable/disable releveling of mobs with level 0
+    usage: /relevelmobs <on/off>

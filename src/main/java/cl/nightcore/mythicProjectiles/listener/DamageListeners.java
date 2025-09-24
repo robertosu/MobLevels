@@ -1,8 +1,9 @@
 package cl.nightcore.mythicProjectiles.listener;
 
-import cl.nightcore.mythicProjectiles.MythicProjectiles;
 import cl.nightcore.mythicProjectiles.boss.BossUtil;
 import cl.nightcore.mythicProjectiles.boss.WorldBoss;
+import cl.nightcore.mythicProjectiles.util.MobUtil;
+import io.lumine.mythic.bukkit.events.MythicDamageEvent;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -11,7 +12,29 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
 public class DamageListeners implements Listener {
 
+
+
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onMythicDamage(MythicDamageEvent event) {
+        double baseDamage = event.getDamage();
+        double finalDamage = baseDamage;
+
+        // Aplicar multiplicador normal de nivel
+        int mobLevel = MobUtil.getLevel(event.getCaster().getEntity().getBukkitEntity());
+        double multiplier = Math.pow(1.0425, mobLevel - 1);
+        finalDamage *= multiplier;
+
+        if (event.getCaster().getEntity().getBukkitEntity() instanceof LivingEntity livingEntity){
+            if (WorldBoss.isBoss(livingEntity)) {
+                double bossMultiplier = BossUtil.calculateBossDamageMultiplier(livingEntity, mobLevel);
+                finalDamage = baseDamage * bossMultiplier;
+            }
+        }
+        event.setDamage(finalDamage);
+    }
+
+
+        @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
 
         if (event.getDamager() instanceof Creeper creeper) {
@@ -20,7 +43,7 @@ public class DamageListeners implements Listener {
             double finalDamage = baseDamage;
 
             // Aplicar multiplicador normal de nivel
-            int mobLevel = MythicProjectiles.getLevel(creeper);
+            int mobLevel = MobUtil.getLevel(creeper);
             double multiplier = Math.pow(1.0425, mobLevel - 1);
             finalDamage *= multiplier;
 
@@ -58,12 +81,12 @@ public class DamageListeners implements Listener {
             return;
         }
 
-        int mobLevel = MythicProjectiles.getLevel(shooter);
+        int mobLevel = MobUtil.getLevel(shooter);
         double baseDamage = event.getDamage();
         double finalDamage = baseDamage;
 
-        System.out.println("SHOOTER: " + shooter.getName());
-        System.out.println("DAÑO ORIGINAL: " + event.getDamage());
+        /*System.out.println("SHOOTER: " + shooter.getName());
+        System.out.println("DAÑO ORIGINAL: " + event.getDamage());*/
 
         // Si es jefe, usar el multiplicador de jefe
         if (WorldBoss.isBoss(shooter)) {
@@ -75,7 +98,7 @@ public class DamageListeners implements Listener {
             finalDamage *= multiplier;
         }
 
-        System.out.println("DAÑO FINAL: " + finalDamage);
+        /*System.out.println("DAÑO FINAL: " + finalDamage);*/
         event.setDamage(finalDamage);
     }
 }

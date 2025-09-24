@@ -2,43 +2,39 @@ package cl.nightcore.mythicProjectiles;
 
 import cl.nightcore.mythicProjectiles.boss.WorldBoss;
 import cl.nightcore.mythicProjectiles.command.ReloadCommand;
+import cl.nightcore.mythicProjectiles.command.SummonCommand;
 import cl.nightcore.mythicProjectiles.config.ConfigManager;
 import cl.nightcore.mythicProjectiles.listener.*;
 import cl.nightcore.mythicProjectiles.nametag.NametagManager;
 import cl.nightcore.mythicProjectiles.placeholderapi.AuraLevelExpansion;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
 
-public class MythicProjectiles extends JavaPlugin implements Listener {
+public class MythicProjectiles extends JavaPlugin{
 
     public static NamespacedKey levelKey;
     private static MythicProjectiles instance;
     private ConfigManager configManager;
     private NametagManager nametagManager;
 
+
     public static MythicProjectiles getInstance() {
         return instance;
     }
 
-    public static int getLevel(Entity entity) {
-        return entity.getPersistentDataContainer().getOrDefault(levelKey, PersistentDataType.INTEGER, 0);
-    }
-
     public static int getPlayerLevel(Player player) {
-        return (int )Math.round(AuraSkillsApi.get().getUserManager().getUser(player.getUniqueId()).getSkillAverage());
+        return (int)Math.round(AuraSkillsApi.get().getUserManager().getUser(player.getUniqueId()).getSkillAverage());
     }
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-
+        // Registrar comando de summon
+        new SummonCommand(this);
         // Initialize keys
         levelKey = new NamespacedKey(this, "level");
         instance = this;
@@ -51,8 +47,9 @@ public class MythicProjectiles extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new DamageListeners(), this);
         getServer().getPluginManager().registerEvents(new CombustListener(), this);
         getServer().getPluginManager().registerEvents(new DeathMessageListeners(), this);
-        getServer().getPluginManager().registerEvents(new XpGainListener(), this);
         getServer().getPluginManager().registerEvents(new BossListener(), this);
+
+
 
         Objects.requireNonNull(getCommand("moblevels")).setExecutor(new ReloadCommand(this));
         configManager = new ConfigManager(this);

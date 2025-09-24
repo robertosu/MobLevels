@@ -1,35 +1,81 @@
 package cl.nightcore.mythicProjectiles.boss;
 
 import cl.nightcore.mythicProjectiles.MythicProjectiles;
+import cl.nightcore.mythicProjectiles.config.ConfigManager;
+import cl.nightcore.mythicProjectiles.util.MobUtil;
+import io.lumine.mythic.bukkit.MythicBukkit;
+import io.lumine.mythic.core.mobs.ActiveMob;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.inventory.EnchantingInventory;
 
-import java.util.Arrays;
+import static cl.nightcore.mythicProjectiles.config.ConfigManager.spigotMode;
+import static cl.nightcore.mythicProjectiles.util.MobUtil.getLevel;
 
 public class BossUtil {
+
+    private static final NamespacedKey bloodNightIsSpecialMob = new NamespacedKey("bloodnight","isspecialmob");
+
 
     /**
      * Verifica si una entidad puede ser un jefe
      */
-    public static boolean canBeBoss(LivingEntity entity) {
+    public static boolean canBeBoss(Entity entity) {
+
+
+        if (spigotMode){
+            return false;
+        }
+
+
+        if (entity.getEntitySpawnReason().equals(CreatureSpawnEvent.SpawnReason.SPAWNER)){
+            return false;
+        }
+
+
+        if (entity.getPersistentDataContainer().has(bloodNightIsSpecialMob)) {
+            return false;
+        }
+
         // Verificar si el tipo de entidad está en el enum HostileMob
-        EntityType entityType = entity.getType();
-        return Arrays.stream(HostileMob.values())
-                .anyMatch(hostileMob -> hostileMob.getEntityType() == entityType);
+        return HostileMob.isHostile(entity.getType());
     }
+
+    public static void applyBossModificationsMythic(ActiveMob activeMob, int level, BossDifficulty difficulty) {
+        var entity = activeMob.getEntity().getBukkitEntity();
+
+        // Marcar como jefe
+        WorldBoss.setBoss(entity, true);
+        WorldBoss.setBossDifficulty(entity, difficulty);
+
+        applyBossHealthMythic(activeMob, level, difficulty);
+
+        // No establecemos nombre personalizado aquí - eso lo maneja NametagManager
+    }
+
 
     /**
      * Aplica las modificaciones de jefe a una entidad
      */
+
+
     public static void applyBossModifications(LivingEntity entity, int level, BossDifficulty difficulty) {
+
+        MobUtil.setLeveledKey(entity, level);
         // Marcar como jefe
         WorldBoss.setBoss(entity, true);
         WorldBoss.setBossDifficulty(entity, difficulty);
 
         // Aplicar modificaciones de HP
         applyBossHealth(entity, level, difficulty);
-
         // Aplicar modificaciones de daño
         applyBossDamage(entity, level, difficulty);
 
@@ -50,13 +96,29 @@ public class BossUtil {
             double leveledHealth = baseHealth * levelMultiplier;
 
             // Aplicar multiplicador de jefe: nivel * (1 + 15% por tier)
-            double bossHealthMultiplier = level * (1.0 + (0.15 * difficulty.getTier()));
+            double bossHealthMultiplier = level * difficulty.getDamageMultiplier();
             double finalHealth = leveledHealth * bossHealthMultiplier;
 
             healthAttribute.setBaseValue(finalHealth);
             entity.setHealth(finalHealth);
+
+
         }
     }
+
+    private static void applyBossHealthMythic(ActiveMob entity, int level, BossDifficulty difficulty) {
+        Bukkit.getScheduler().runTaskLater(MythicProjectiles.getInstance(),()->{
+            double baseHealth = entity.getType().getHealth().get();
+            double levelMultiplier = Math.pow(1.0425, level - 1);
+            double leveledHealth = baseHealth * levelMultiplier;
+
+            // Aplicar multiplicador de jefe: nivel * (1 + 15% por tier)
+            double bossHealthMultiplier = level * difficulty.getDamageMultiplier();
+            double finalHealth = leveledHealth * bossHealthMultiplier;
+            entity.getEntity().setHealthAndMax(finalHealth);
+        },5L);
+    }
+
 
     /**
      * Aplica el daño de jefe: daño_normal * (1 + nivel * 0.05) * multiplicador_dificultad
@@ -72,8 +134,8 @@ public class BossUtil {
             double normalDamage = baseDamage * levelMultiplier;
 
             // Aplicar multiplicador de jefe: daño_normal * (1 + nivel * 0.05) * multiplicador_dificultad
-            double bossLevelMultiplier = 1.0 + (level * 0.05);
-            double finalDamage = normalDamage * bossLevelMultiplier * difficulty.getDamageMultiplier();
+            double bossLevelMultiplier = 1.0 + (level * 0.05) * difficulty.getDamageMultiplier();
+            double finalDamage = normalDamage * bossLevelMultiplier;
 
             damageAttribute.setBaseValue(finalDamage);
         }
@@ -104,4 +166,5 @@ public class BossUtil {
         // El resultado final debe ser: multiplicador_nivel * multiplicador_jefe * multiplicador_dificultad
         return levelMultiplier * bossLevelMultiplier * difficultyMultiplier;
     }
+
 }

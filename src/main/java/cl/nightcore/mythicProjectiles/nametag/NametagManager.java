@@ -10,6 +10,7 @@ import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataValue;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
+import io.lumine.mythic.bukkit.MythicBukkit;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -25,14 +26,17 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-import static cl.nightcore.mythicProjectiles.MythicProjectiles.getLevel;
+import static cl.nightcore.mythicProjectiles.util.MobUtil.getLevel;
+import static cl.nightcore.mythicProjectiles.config.ConfigManager.spigotMode;
 
 public class NametagManager implements Listener {
-    private static final double NAMETAG_RADIUS = 20.0;
+    // Rangos diferentes para mobs normales y bosses
+    private static final double NORMAL_NAMETAG_RADIUS = 20.0;
+    private static final double BOSS_NAMETAG_RADIUS = 50.0; // Más lejos para bosses
+
     private final MythicProjectiles plugin;
     private final NametagPacketSender nametagSender;
     private final ProtocolManager protocolManager;
-    // Nuevo mapa para rastrear entidades etiquetadas por cada jugador
     private final Map<Player, Set<Integer>> playerNametaggedEntities = new HashMap<>();
     private BukkitTask globalNametagTask;
 
@@ -44,37 +48,55 @@ public class NametagManager implements Listener {
     }
 
     private void startGlobalNametagUpdates() {
-        globalNametagTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (Player viewer : Bukkit.getOnlinePlayers()) {
-                updateNametagsForPlayer(viewer);
-            }
-        }, 0L, 20L);
+        if (!spigotMode) {
+            globalNametagTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                for (Player viewer : Bukkit.getOnlinePlayers()) {
+                    updateNametagsForPlayer(viewer);
+                }
+            }, 0L, 20L);
+        }
     }
 
     private void updateNametagsForPlayer(Player viewer) {
-        List<Entity> nearbyEntities = viewer.getNearbyEntities(NAMETAG_RADIUS, NAMETAG_RADIUS, NAMETAG_RADIUS)
+        // Usar el rango máximo para obtener todas las entidades posibles
+        double maxRadius = Math.max(BOSS_NAMETAG_RADIUS, NORMAL_NAMETAG_RADIUS);
+
+        List<Entity> nearbyEntities = viewer.getNearbyEntities(maxRadius, maxRadius, maxRadius)
                 .stream()
-                .filter(entity -> entity instanceof LivingEntity && !(entity instanceof Player) && !(entity instanceof ArmorStand))
+                .filter(entity -> entity instanceof LivingEntity && !(entity instanceof Player) /*&& !(entity instanceof ArmorStand stand)*/)
                 .toList();
 
         Set<Integer> currentNametaggedEntities = playerNametaggedEntities.computeIfAbsent(viewer, k -> new HashSet<>());
         Set<Integer> updatedEntities = new HashSet<>();
 
         for (Entity entity : nearbyEntities) {
+          /*  if (entity instanceof  ArmorStand stand){
+                if  (!stand.hasMetadata("MythicMobs")){
+                    continue;
+                }
+            }*/
             LivingEntity livingEntity = (LivingEntity) entity;
             int entityId = entity.getEntityId();
-            updatedEntities.add(entityId);
 
-            if (viewer.hasLineOfSight(entity)) {
-                // Verificar si es un jefe
-                if (WorldBoss.isBoss(livingEntity)) {
-                    handleBossNametag(viewer, livingEntity);
+            // Determinar el rango apropiado para esta entidad
+            double entityRadius = getEntityNametagRadius(livingEntity);
+            double distanceToEntity = viewer.getLocation().distance(entity.getLocation());
+
+            // Solo procesar si está dentro del rango apropiado
+            if (distanceToEntity <= entityRadius) {
+                updatedEntities.add(entityId);
+
+                if (viewer.hasLineOfSight(entity)) {
+                    // Verificar si es un jefe
+                    if (WorldBoss.isBoss(livingEntity)) {
+                        handleBossNametag(viewer, livingEntity);
+                    } else {
+                        handleNormalMobNametag(viewer, livingEntity);
+                    }
                 } else {
-                    handleNormalMobNametag(viewer, livingEntity);
+                    // Si no tiene línea de visión, ocultar la nametag
+                    hideNametag(viewer, entityId);
                 }
-            } else {
-                // Si no tiene línea de visión, ocultar la nametag
-                hideNametag(viewer, entityId);
             }
         }
 
@@ -91,7 +113,16 @@ public class NametagManager implements Listener {
         currentNametaggedEntities.addAll(updatedEntities);
     }
 
+    /**
+     * Determina el rango de nametag apropiado para una entidad
+     */
+    private double getEntityNametagRadius(LivingEntity entity) {
+        return WorldBoss.isBoss(entity) ? BOSS_NAMETAG_RADIUS : NORMAL_NAMETAG_RADIUS;
+    }
+
     private void handleBossNametag(Player viewer, LivingEntity entity) {
+
+
         BossDifficulty difficulty = WorldBoss.getBossDifficulty(entity);
         if (difficulty == null) return;
 
@@ -124,7 +155,7 @@ public class NametagManager implements Listener {
     @NotNull
     private static Component getBossDifficultyComponent(BossDifficulty difficulty) {
         // Obtener el color de la dificultad desde el enum
-        NamedTextColor difficultyColor = difficulty.getColor();
+        TextColor difficultyColor = difficulty.getColor();
 
         // Si el color no está definido en el enum, usar colores por defecto
         if (difficultyColor == null) {

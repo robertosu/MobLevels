@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConfigManager {
 
     private static final int MAX_CACHED_LEVEL = 100;
+    public static boolean spigotMode = false;
     private static Map<String, Component> levelComponentCache = new ConcurrentHashMap<>();
     private static Map<String, Component> levelComponentCache2 = new ConcurrentHashMap<>();
     private static final Map<Range, String> gradientFormats = new HashMap<>();

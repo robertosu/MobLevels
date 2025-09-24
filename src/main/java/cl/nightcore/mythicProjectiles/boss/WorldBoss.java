@@ -1,8 +1,11 @@
 package cl.nightcore.mythicProjectiles.boss;
 import cl.nightcore.mythicProjectiles.MythicProjectiles;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.persistence.PersistentDataType;
+
+
 public class WorldBoss {
 
     private static NamespacedKey bossKey;
@@ -13,15 +16,15 @@ public class WorldBoss {
         difficultyKey = new NamespacedKey(plugin, "boss_difficulty");
     }
 
-    public static boolean isBoss(LivingEntity entity) {
+    public static boolean isBoss(Entity entity) {
         return entity.getPersistentDataContainer().getOrDefault(bossKey, PersistentDataType.BOOLEAN, false);
     }
 
-    public static void setBoss(LivingEntity entity, boolean isBoss) {
+    public static void setBoss(Entity entity, boolean isBoss) {
         entity.getPersistentDataContainer().set(bossKey, PersistentDataType.BOOLEAN, isBoss);
     }
 
-    public static BossDifficulty getBossDifficulty(LivingEntity entity) {
+    public static BossDifficulty getBossDifficulty(Entity entity) {
         String difficultyName = entity.getPersistentDataContainer().get(difficultyKey, PersistentDataType.STRING);
         if (difficultyName == null) {
             return null;
@@ -33,7 +36,7 @@ public class WorldBoss {
         }
     }
 
-    public static void setBossDifficulty(LivingEntity entity, BossDifficulty difficulty) {
+    public static void setBossDifficulty(Entity entity, BossDifficulty difficulty) {
         entity.getPersistentDataContainer().set(difficultyKey, PersistentDataType.STRING, difficulty.name());
     }
 

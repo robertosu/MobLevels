@@ -50,7 +50,32 @@ public enum HostileMob {
         this.entityType = entityType;
     }
 
+    /**
+     * Verifica si un EntityType es considerado hostil
+     */
+    public static boolean isHostile(EntityType entityType) {
+        for (HostileMob hostile : values()) {
+            if (hostile.getEntityType() == entityType) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Obtiene el enum correspondiente a un EntityType
+     */
+    public static HostileMob fromEntityType(EntityType entityType) {
+        for (HostileMob hostile : values()) {
+            if (hostile.getEntityType() == entityType) {
+                return hostile;
+            }
+        }
+        return null;
+    }
+
     public EntityType getEntityType() {
         return entityType;
     }
+
 }
